@@ -307,7 +307,7 @@ export function skyCss(m, { dotScale = DOT_SCALE, tone = SKY_TONE, rest = TWINKL
   return sky;
 }
 
-// ---- panels ("Afterglow"): the sidebar, header, composer and every conversation row float as dark rounded cards over the one sky ----
+// ---- panels ("Afterglow"): the sidebar and header frame the window; the composer and every conversation row float as dark rounded cards over the one sky ----
 export const PANEL_MARK = ":root{--sr-scrim:"; // everything before this in `css` is the sky
 export const scrim = (a) => `rgb(${SCRIM.join(" ")} / ${a})`;
 const GLOW = "248 107 216"; // palette "a", the horizon pink
@@ -318,10 +318,9 @@ function panelCss() {
   const waiting = `[data-thread-item]:has([data-sidebar-row]:is(.bg-transparent,.bg-warning\\/4))`, violet = "150 80 220";
   return `${PANEL_MARK}${S};--sr-horizon:linear-gradient(90deg,transparent,#8c309b 14%,#f86bd8 38%,#ffedce 54%,#f86bd8 70%,#8c309b 88%,transparent)}` +
     `[data-slot="sidebar-wrapper"],[data-slot="sidebar"],[data-slot="sidebar-inset"],div:has(>[data-chat-column]),[data-chat-column],[data-workspace-area="conversation"],.messages-timeline-scroll,[data-timeline-loading]{background:transparent!important}` +
-    // sidebar and header: floating cards
-    `[data-slot="sidebar-container"]{padding:.5rem 0 .5rem .5rem;border:0!important}` +
-    // the sidebar card and the header bar are one L-shaped piece: the header starts at the sidebar's edge, with no gap
-    `[data-slot="sidebar-inner"]{background-color:${S2}!important;border:1px solid ${edge};border-radius:.875rem 0 .875rem .875rem;box-shadow:${lift};overflow:hidden}` +
+    // sidebar and header sit against the window's edges as one dark frame, with a hairline where they meet the sky
+    `[data-slot="sidebar-container"]{border:0!important}` +
+    `[data-slot="sidebar-inner"]{background-color:${S2}!important;border-right:1px solid ${edge}}` +
     `[data-thread-item] [aria-current]{background:linear-gradient(90deg,rgb(${GLOW} / .26),rgb(${GLOW} / .05))!important}` +
     // the app gives each row paint containment (content-visibility:auto), which would clip a glow around it
     `${waiting}{content-visibility:visible;position:relative}` +
@@ -329,9 +328,7 @@ function panelCss() {
     `${waiting}::after{content:"";position:absolute;inset:2px 0;border-radius:.375rem;pointer-events:none;opacity:.6;box-shadow:0 0 12px -2px rgb(${violet} / .6),inset 0 0 12px -5px rgb(${violet} / .7)}` +
     `@media (prefers-reduced-motion:no-preference){${waiting}::after{animation:sr-breathe 4.5s ease-in-out infinite alternate}}` +
     `@keyframes sr-breathe{from{opacity:.2}to{opacity:1}}` +
-    `[data-chat-header]{background-color:${S2}!important;margin:.5rem .75rem 0 0;border:1px solid ${edge};border-left:0;border-radius:0 .875rem .875rem 0}` +
-    // with the sidebar hidden the header is a bar of its own again
-    `[data-slot="sidebar"][data-state="collapsed"]~* [data-chat-header]{margin-left:.75rem;border-left:1px solid ${edge};border-radius:.875rem}` +
+    `[data-chat-header]{background-color:${S2}!important;border-bottom:1px solid ${edge}}` +
     // every conversation row is its own card; the transparent block border is the gap between cards (a margin would escape the
     // list's row measurement). The app's per-row bottom padding is replaced so each card is padded evenly.
     `[data-timeline-root]{background-color:var(--sr-scrim);background-clip:padding-box;border-block:.2rem solid transparent;border-radius:1rem;padding:.35rem .85rem}` +
