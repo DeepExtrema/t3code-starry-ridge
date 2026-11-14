@@ -279,7 +279,9 @@ export function skyCss(m, { dotScale = DOT_SCALE, tone = SKY_TONE, rest = TWINKL
   const star = starSvg(dotScale, tone), groups = starGroups(m, TWINKLE_LAYERS.length);
   const layers = `${TWINKLE_BOX}::before,${TWINKLE_BOX}::after,body::before`, halo = (r) => `drop-shadow(0 0 calc(${r}*var(--cw)) ${TWINKLE.colour})`;
   const slots = [48, 86.4, 124.8, 163.2], T = 45, WIN = (13 / 15 / T) * 100, END = 12 / 12.15;
-  const pt = (x, y) => `--x:${f4(x)};--y:${f4(y)}`;
+  // The star's keyframes animate only transform and opacity, so the browser runs them on its compositor and the page
+  // itself never restyles while the star flies. (Stepping custom properties instead made app text jitter on each pass.)
+  const pt = (x, y) => `transform:translate(calc(${f4(x)}*var(--cw)),calc(${f4(y)}*var(--cw)))`;
   let kf = "";
   slots.forEach((x, s) => {
     const p0 = s * 20, p1 = p0 + WIN;
@@ -287,7 +289,6 @@ export function skyCss(m, { dotScale = DOT_SCALE, tone = SKY_TONE, rest = TWINKL
       `${f4(p1)}%{opacity:1;${pt(x + 96 * END, 12.96 + 19.44 * END)}}${f4(p1 + 0.01)}%{opacity:0}`;
   });
   const sky =
-    `@property --x{syntax:"<number>";inherits:false;initial-value:0}@property --y{syntax:"<number>";inherits:false;initial-value:0}` +
     `:root{--cw:max(100vw/192,100vh/108)}` +
     `html{background:#09090b ${dataUri(skySvg(m, dotScale, tone, rest))} 50% 100%/cover no-repeat fixed!important}` +
     `body{background:none!important}` +
@@ -297,7 +298,7 @@ export function skyCss(m, { dotScale = DOT_SCALE, tone = SKY_TONE, rest = TWINKL
     `${layers}{inset:0;background-position:50% 100%;background-size:cover;background-repeat:no-repeat;filter:${halo(0.4)} ${halo(1.1)};mask:radial-gradient(closest-side,#000 60%,#0000 90%) 0 0/9vw 13vh}` +
     TWINKLE_LAYERS.map((sel, g) => `${sel}{background-image:${dataUri(twinkleSvg(m, groups[g], dotScale))};--sd:${TWINKLE.cycles[g]}s;--so:-${trim(g * 2.7)}s}`).join("") +
     `body::after{left:calc(50vw - 96*var(--cw));top:calc(100vh - 108*var(--cw));margin:calc(${star.y0}*var(--cw)) 0 0 calc(${star.x0}*var(--cw));width:calc(${star.w}*var(--cw));height:calc(${star.h}*var(--cw));opacity:0;` +
-    `transform:translate(calc(var(--x)*var(--cw)),calc(var(--y)*var(--cw)));background:${dataUri(star.svg)} 0 0/100% 100% no-repeat}` +
+    `will-change:transform,opacity;background:${dataUri(star.svg)} 0 0/100% 100% no-repeat}` +
     `@media (prefers-reduced-motion:no-preference){body::after{animation:sr-star ${T}s linear infinite}}` +
     `@media (prefers-reduced-motion:no-preference){${layers}{animation:sr-twinkle var(--sd) var(--so) infinite,sr-pick calc(5*var(--sd)) var(--so) steps(10) infinite}}` +
     `@keyframes sr-twinkle{0%,22%,52%,66%,100%{opacity:0}9%{opacity:${TWINKLE.peak}}58%{opacity:${TWINKLE.echo}}}` +
@@ -319,7 +320,8 @@ function panelCss() {
     `[data-slot="sidebar-wrapper"],[data-slot="sidebar"],[data-slot="sidebar-inset"],div:has(>[data-chat-column]),[data-chat-column],[data-workspace-area="conversation"],.messages-timeline-scroll,[data-timeline-loading]{background:transparent!important}` +
     // sidebar and header: floating cards
     `[data-slot="sidebar-container"]{padding:.5rem 0 .5rem .5rem;border:0!important}` +
-    `[data-slot="sidebar-inner"]{background-color:${S2}!important;border:1px solid ${edge};border-radius:.875rem;box-shadow:${lift};overflow:hidden}` +
+    // the sidebar card and the header bar are one L-shaped piece: the header starts at the sidebar's edge, with no gap
+    `[data-slot="sidebar-inner"]{background-color:${S2}!important;border:1px solid ${edge};border-radius:.875rem 0 .875rem .875rem;box-shadow:${lift};overflow:hidden}` +
     `[data-thread-item] [aria-current]{background:linear-gradient(90deg,rgb(${GLOW} / .26),rgb(${GLOW} / .05))!important}` +
     // the app gives each row paint containment (content-visibility:auto), which would clip a glow around it
     `${waiting}{content-visibility:visible;position:relative}` +
@@ -327,7 +329,9 @@ function panelCss() {
     `${waiting}::after{content:"";position:absolute;inset:2px 0;border-radius:.375rem;pointer-events:none;opacity:.6;box-shadow:0 0 12px -2px rgb(${violet} / .6),inset 0 0 12px -5px rgb(${violet} / .7)}` +
     `@media (prefers-reduced-motion:no-preference){${waiting}::after{animation:sr-breathe 4.5s ease-in-out infinite alternate}}` +
     `@keyframes sr-breathe{from{opacity:.2}to{opacity:1}}` +
-    `[data-chat-header]{background-color:${S2}!important;margin:.5rem .75rem 0;border:1px solid ${edge};border-radius:.875rem}` +
+    `[data-chat-header]{background-color:${S2}!important;margin:.5rem .75rem 0 0;border:1px solid ${edge};border-left:0;border-radius:0 .875rem .875rem 0}` +
+    // with the sidebar hidden the header is a bar of its own again
+    `[data-slot="sidebar"][data-state="collapsed"]~* [data-chat-header]{margin-left:.75rem;border-left:1px solid ${edge};border-radius:.875rem}` +
     // every conversation row is its own card; the transparent block border is the gap between cards (a margin would escape the
     // list's row measurement). The app's per-row bottom padding is replaced so each card is padded evenly.
     `[data-timeline-root]{background-color:var(--sr-scrim);background-clip:padding-box;border-block:.2rem solid transparent;border-radius:1rem;padding:.35rem .85rem}` +
