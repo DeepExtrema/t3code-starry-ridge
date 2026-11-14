@@ -1,0 +1,18 @@
+{
+  "name": "t3code-starry-ridge",
+  "version": "1.0.0",
+  "description": "Starry Ridge: a night-sky theme for T3 Code",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node check.mjs"
+  },
+  "dependencies": {
+    "ascii-magic-art": "1.1.0"
+  },
+  "devDependencies": {
+    "playwright-core": "1.65.1"
+  }
+}

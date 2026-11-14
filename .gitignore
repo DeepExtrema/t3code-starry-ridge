@@ -1,0 +1,4 @@
+node_modules/
+# written by check.mjs
+reference-*.png
+compare-*.png
