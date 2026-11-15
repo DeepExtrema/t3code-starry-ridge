@@ -320,7 +320,11 @@ function panelCss() {
     `[data-slot="sidebar-wrapper"],[data-slot="sidebar"],[data-slot="sidebar-inset"],div:has(>[data-chat-column]),[data-chat-column],[data-workspace-area="conversation"],.messages-timeline-scroll,[data-timeline-loading]{background:transparent!important}` +
     // sidebar and header sit against the window's edges as one dark frame, with a hairline where they meet the sky
     `[data-slot="sidebar-container"]{border:0!important}` +
-    `[data-slot="sidebar-inner"]{background-color:${S2}!important;border-right:1px solid ${edge}}` +
+    `[data-slot="sidebar-inner"]{background-color:${S2}!important;border-right:1px solid ${edge};position:relative}` +
+    // the inside corner, where the sidebar meets the header, is rounded: a square of the frame's colour with a quarter
+    // circle cut out of it, carrying the hairline round the bend. It hangs just outside the sidebar, so it is switched off when the sidebar is hidden.
+    `[data-slot="sidebar-inner"]::after{content:"";position:absolute;left:100%;top:calc(var(--workspace-topbar-height) - 1px);width:1rem;height:1rem;pointer-events:none;background:radial-gradient(circle at 100% 100%,#0000 calc(1rem - 1.5px),${edge} calc(1rem - 1px),${edge} 1rem,${S2} calc(1rem + 1px))}` +
+    `[data-state="collapsed"] [data-slot="sidebar-inner"]::after{display:none}` +
     `[data-thread-item] [aria-current]{background:linear-gradient(90deg,rgb(${GLOW} / .26),rgb(${GLOW} / .05))!important}` +
     // the app gives each row paint containment (content-visibility:auto), which would clip a glow around it
     `${waiting}{content-visibility:visible;position:relative}` +
