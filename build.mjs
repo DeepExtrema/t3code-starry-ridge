@@ -321,12 +321,13 @@ function panelCss() {
     // sidebar and header sit against the window's edges as one dark frame, with a hairline where they meet the sky
     `[data-slot="sidebar-container"]{border:0!important}` +
     `[data-slot="sidebar-inner"]{background-color:${S2}!important;border-right:1px solid ${edge};position:relative}` +
-    // The inside corners under the header are rounded, beside the sidebar and beside the right-hand panel: a small square of
-    // the frame's colour with a quarter circle cut out of it, carrying the hairline round the bend. Each hangs just outside
-    // its panel, so the sidebar's is switched off while the sidebar is hidden. --sr-c says which side the cut-out faces.
-    `[data-slot="sidebar-inner"]::after,[data-workspace-area="panel"]::before{content:"";position:absolute;top:calc(var(--workspace-topbar-height) - 1px);width:.5rem;height:.5rem;pointer-events:none;background:radial-gradient(circle at var(--sr-c,100%) 100%,#0000 calc(.5rem - 1.5px),${edge} calc(.5rem - 1px),${edge} .5rem,${S2} calc(.5rem + 1px))}` +
-    `[data-slot="sidebar-inner"]::after{left:100%}` +
-    `[data-workspace-area="panel"]::before{right:100%;--sr-c:0%}` +
+    // The inside corners under the header are rounded at both ends of its line: a small square of the frame's colour
+    // with a quarter circle cut out of it, carrying the hairline round the bend. The left one hangs just outside the
+    // sidebar, so it is switched off while the sidebar is hidden; the right one sits at the header's own right end,
+    // which is the window's edge, or the right-hand panel's when that is open. --sr-c says which side the cut-out faces.
+    `[data-slot="sidebar-inner"]::after,[data-chat-header]::after{content:"";position:absolute;width:.5rem;height:.5rem;pointer-events:none;background:radial-gradient(circle at var(--sr-c,100%) 100%,#0000 calc(.5rem - 1.5px),${edge} calc(.5rem - 1px),${edge} .5rem,${S2} calc(.5rem + 1px))}` +
+    `[data-slot="sidebar-inner"]::after{left:100%;top:calc(var(--workspace-topbar-height) - 1px)}` +
+    `[data-chat-header]::after{right:0;top:100%;z-index:1;--sr-c:0%}` +
     `[data-workspace-area="panel"]{border-color:${edge}}` + // the same hairline as the rest of the frame
     `[data-state="collapsed"] [data-slot="sidebar-inner"]::after{display:none}` +
     `[data-thread-item] [aria-current]{background:linear-gradient(90deg,rgb(${GLOW} / .26),rgb(${GLOW} / .05))!important}` +
