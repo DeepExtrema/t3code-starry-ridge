@@ -86,12 +86,24 @@ node check.mjs
 The check validates the theme file, checks text contrast, and compares the sky against the original
 artwork's own renderer. It writes `reference-*.png` and `compare-*.png` next to the script.
 
+It also guards the unread glow, the cue that a result is waiting, in two ways:
+
+- It renders an unread, a woken, a read and a selected sidebar row on a copy of T3 Code's sidebar markup.
+  The unread and woken rows must glow on screen, and the read and selected rows must not.
+- It looks in T3 Code's own bundle for every part of the app the theme hooks into, and fails if one is gone.
+  On Linux it finds a running T3 Code AppImage by itself. Otherwise set `T3_APP_ASAR` to the path of T3 Code's
+  `app.asar`; without it this step is skipped.
+
+The first catches a change to the theme. The second catches a change in T3 Code. Neither looks at the
+running app, so after a T3 Code update that fails the second check, open the app and look.
+
 ## Limits
 
 - **Size:** T3 Code allows 20,000 characters of theme CSS. This theme uses about 19,400, so there is little room to add more.
 - **Internal selectors:** some effects hook into parts of T3 Code that its theme guide does not list as
   stable: the sidebar's edge and corner, the per-row cards, the unread glow, and the send button. A T3 Code
-  update can switch one of them off. The rest of the theme keeps working.
+  update can switch one of them off. The rest of the theme keeps working. `node check.mjs` reports which
+  ones are missing from an installed T3 Code.
 - **Dark only:** the theme defines a dark appearance.
 - **Mobile:** T3 Code's theme guide says its mobile apps do not use themes.
 

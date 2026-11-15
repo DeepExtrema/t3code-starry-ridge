@@ -2,8 +2,12 @@
 // Writes reference-WxH.png (the site's own renderTo, fit "cover", no shooting star) and
 // compare-WxH.png (reference left, the shipped sky right). The pixel difference is measured on the sky
 // at the site's own dot size and brightness (DOT_SCALE 1, SKY_TONE 1,1,1), so it still checks the port
-// whatever the shipped tuning is. Exits 1 if a hard limit fails.
+// whatever the shipped tuning is.
+// It also checks the cue that a result is waiting: on a copy of T3 Code's sidebar markup, an unread row must glow
+// and a read row must not. And when it can find T3 Code, it checks that the parts of the app the theme hooks into
+// are still there. Exits 1 if a hard limit fails.
 // Needs a Chromium binary: set CHROMIUM to its path if it is not /usr/bin/chromium.
+// To check an installed T3 Code, set T3_APP_ASAR to its app.asar (on Linux a running AppImage is found on its own).
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -14,6 +18,7 @@ const HERE = new URL(".", import.meta.url).pathname;
 const PKG = path.join(HERE, "node_modules/ascii-magic-art/");
 const SIZES = [[1920, 1080], [1280, 1416]];
 const MAD_AIM = 4, MAX_CSS = 20000, MIN_CONTRAST = 4.5;
+const MIN_CUE = 6; // how much brighter the 5 px outside an unread row's list item must be than outside a read one's (0..255, mean)
 let failed = false;
 const hard = (ok, msg) => { console.log(`${ok ? "PASS" : "FAIL"}  ${msg}`); if (!ok) failed = true; };
 
@@ -112,7 +117,74 @@ try {
     const mean = out.mad.reduce((s, v) => s + v, 0) / 3;
     console.log(`${mean <= MAD_AIM ? "PASS" : "WARN"}  ${w}x${h}: port at the site's dot size and brightness, mean abs difference per channel R ${out.mad[0].toFixed(2)}  G ${out.mad[1].toFixed(2)}  B ${out.mad[2].toFixed(2)}  (mean ${mean.toFixed(2)}, aim <= ${MAD_AIM}; 0..255)`);
   }
+
+  // ---- the cue that a result is waiting: an unread sidebar row glows, a read one does not ------------------------
+  // These rows copy T3 Code's sidebar markup (0.1.10-nightly.20261114). The app marks an unread or woken thread only
+  // by class, and gives every row paint containment, which clips a glow unless the theme lifts it. So this catches a
+  // theme change that drops the glow or lets it be clipped. It cannot see T3 Code change; the hook scan below does that.
+  const rowBase = "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-md text-left outline-none select-none";
+  const rows = {
+    unread: ["bg-transparent text-sidebar-foreground hover:bg-sidebar-row-hover", ""],
+    woke: ["bg-warning/4 hover:bg-warning/8 text-sidebar-foreground", ""],
+    read: ["text-sidebar-muted-foreground/75 hover:bg-sidebar-row-hover hover:text-sidebar-foreground", ""],
+    selected: ["bg-sidebar-row-active text-sidebar-foreground", ` aria-current="page"`],
+  };
+  const fixture = `<!doctype html><meta charset=utf-8><style>body{margin:0;background:#09090b;color:#ffedce;font:13px/1.4 sans-serif}ul{margin:0;padding:20px;width:260px}` +
+    `li{list-style:none;padding:2px 0;margin-bottom:20px;content-visibility:auto;contain-intrinsic-size:auto 78px}li>div{position:relative;width:100%;box-sizing:border-box;overflow:hidden;border-radius:6px;padding:8px 10px}` +
+    `${css.slice(cut)}</style><ul>${Object.entries(rows).map(([name, [cls, attr]]) => `<li data-thread-item="${name}"><div role="treeitem" data-sidebar-row="${name}"${attr} class="${rowBase} ${cls}">${name}<br>thread title</div></li>`).join("")}</ul>`;
+  const cue = async (reducedMotion) => {
+    const fp = await browser.newPage({ viewport: { width: 300, height: 420 }, deviceScaleFactor: 1 });
+    await fp.emulateMedia({ reducedMotion });
+    await fp.setContent(fixture);
+    await fp.waitForTimeout(200);
+    await fp.evaluate(() => document.getAnimations().forEach((a) => { a.pause(); a.currentTime = a.effect.getComputedTiming().duration; })); // the breath at its brightest
+    await fp.waitForTimeout(100);
+    const b64 = (await fp.screenshot({ type: "png" })).toString("base64");
+    const out = await fp.evaluate(async (b64) => {
+      const img = new Image(); img.src = "data:image/png;base64," + b64; await img.decode();
+      const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height).data, res = {};
+      for (const li of document.querySelectorAll("[data-thread-item]")) {
+        const a = getComputedStyle(li, "::after"), r = li.getBoundingClientRect(); let sum = 0, n = 0;
+        // the band: every pixel within 5 px outside the list item. Outside, because that is what containment clips.
+        for (let py = Math.floor(r.top) - 5; py < Math.ceil(r.bottom) + 5; py++) for (let px = Math.floor(r.left) - 5; px < Math.ceil(r.right) + 5; px++) {
+          if (px >= r.left && px < r.right && py >= r.top && py < r.bottom) continue;
+          const o = (py * c.width + px) * 4; sum += Math.max(d[o] - 9, d[o + 1] - 9, d[o + 2] - 11, 0); n++;
+        }
+        res[li.dataset.threadItem] = { drawn: a.content !== "none" && a.boxShadow !== "none", anim: a.animationName, band: sum / n };
+      }
+      return res;
+    }, b64);
+    await fp.close();
+    return out;
+  };
+  const moving = await cue("no-preference"), still = await cue("reduce"), f1 = (v) => v.toFixed(1);
+  hard(moving.unread.drawn && moving.woke.drawn && moving.unread.anim === "sr-breathe" && moving.woke.anim === "sr-breathe", "unread and woken sidebar rows get the breathing glow");
+  hard(!moving.read.drawn && !moving.selected.drawn, "read and selected sidebar rows get no glow");
+  hard(moving.unread.band - moving.read.band >= MIN_CUE && moving.woke.band - moving.read.band >= MIN_CUE,
+    `the glow shows on screen: brightness around the row is unread ${f1(moving.unread.band)}, woken ${f1(moving.woke.band)}, read ${f1(moving.read.band)} (unread and woken at least ${MIN_CUE} above read)`);
+  hard(still.unread.drawn && still.unread.anim === "none" && still.unread.band - still.read.band >= MIN_CUE / 2,
+    `with reduced motion the glow stays, still: unread ${f1(still.unread.band)}, read ${f1(still.read.band)}`);
 } finally { await browser.close(); server.close(); }
+
+// ---- T3 Code itself: are the parts the theme hooks into still in the installed app? ------------------------------
+// T3 Code's theme guide does not list these as stable. An update can rename one, and then an effect goes away with no
+// error. The scan looks for each name in the app's bundle; a miss means: open the app and re-check that effect.
+const HOOKS = [
+  ["unread glow: sidebar row", "data-sidebar-row"], ["unread glow: thread item", "data-thread-item"],
+  ["unread glow: unread row classes", "bg-transparent text-sidebar-foreground hover:bg-sidebar-row-hover"],
+  ["unread glow: woken row classes", "bg-warning/4 hover:bg-warning/8"],
+  ["unread glow: read row classes", "text-sidebar-muted-foreground/75"],
+  ["send button", "bg-message-action"], ["per-row cards", "data-timeline-root"], ["per-row cards: row kind", "data-timeline-row-kind"],
+  ["your message bubble", "data-user-message-bubble"], ["sidebar frame", "sidebar-inner"], ["sidebar frame: container", "sidebar-container"],
+  ["header", "data-chat-header"], ["header height", "--workspace-topbar-height"], ["composer", "composer-host"], ["code blocks", "chat-markdown-codeblock"],
+];
+const asar = process.env.T3_APP_ASAR ?? fs.readdirSync("/tmp").filter((d) => d.startsWith(".mount_T3-Cod")).map((d) => `/tmp/${d}/resources/app.asar`).find((f) => fs.existsSync(f));
+if (!asar) console.log("SKIP  T3 Code not found, so its hooks were not checked: set T3_APP_ASAR to its app.asar");
+else {
+  const app = fs.readFileSync(asar), missing = HOOKS.filter(([, needle]) => !app.includes(needle)).map(([what, needle]) => `${what} (${needle})`);
+  hard(!missing.length, `T3 Code at ${asar} still has ${HOOKS.length - missing.length} of the ${HOOKS.length} parts the theme hooks into${missing.length ? "; missing: " + missing.join(", ") : ""}`);
+}
 
 console.log(failed ? "RESULT: FAIL" : "RESULT: OK");
 process.exit(failed ? 1 : 0);
