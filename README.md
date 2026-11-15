@@ -1,13 +1,13 @@
 # Starry Ridge
 
 A dark theme for [T3 Code](https://t3.codes) that puts a dotted night sky behind the app. Stars sparkle
-faintly, a shooting star crosses now and then, and the panels float over the sky as dark cards.
+faintly, a shooting star crosses now and then, and the messages and composer float over the sky as dark cards.
 
 ![Typing a message and getting a reply in T3 Code with the Starry Ridge theme](media/thread.gif)
 
 ## Screenshots
 
-![A new thread: the sky, the floating sidebar, and the composer](media/home.png)
+![A new thread: the sky, the sidebar, and the composer](media/home.png)
 
 ![A reply with a code block](media/thread.png)
 
@@ -35,6 +35,8 @@ The screenshots show T3 Code with invented demo projects.
 4. Click **Choose files**, select `theme.json`, then click **Add theme**.
 
 T3 Code switches to Starry Ridge. To go back, pick another theme on the same page.
+
+To update, add the new `theme.json` the same way and choose **Update existing**.
 
 Tested on T3 Code 0.1.10-nightly.20261114, in the Linux desktop app and in the web client in Chromium.
 
@@ -86,9 +88,9 @@ artwork's own renderer. It writes `reference-*.png` and `compare-*.png` next to 
 
 ## Limits
 
-- **Size:** T3 Code allows 20,000 characters of theme CSS. This theme uses about 18,800, so there is little room to add more.
+- **Size:** T3 Code allows 20,000 characters of theme CSS. This theme uses about 19,400, so there is little room to add more.
 - **Internal selectors:** some effects hook into parts of T3 Code that its theme guide does not list as
-  stable: the floating sidebar, the per-row cards, the unread glow, and the send button. A T3 Code
+  stable: the sidebar's edge and corner, the per-row cards, the unread glow, and the send button. A T3 Code
   update can switch one of them off. The rest of the theme keeps working.
 - **Dark only:** the theme defines a dark appearance.
 - **Mobile:** T3 Code's theme guide says its mobile apps do not use themes.
