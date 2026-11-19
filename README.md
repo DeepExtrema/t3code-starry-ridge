@@ -1,5 +1,7 @@
 # Starry Ridge
 
+[![Featured on Agent Skins](https://agentskins.app/badge/t3/starry-ridge.svg)](https://agentskins.app/skins/t3/starry-ridge)
+
 A dark theme for [T3 Code](https://t3.codes) that puts a dotted night sky behind the app. Stars sparkle
 faintly, a shooting star crosses now and then, and the messages and composer float over the sky as dark cards.
 
